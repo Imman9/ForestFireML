@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1078332833297",
+    "project_id": "forestfiredetection-d7e7e",
+    "storage_bucket": "forestfiredetection-d7e7e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1078332833297:android:387890303bead7be29fbb0",
+        "android_client_info": {
+          "package_name": "com.imman_1.forestfiredetection"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOYC9h__NEDV-eiU4RcgpR48UJIrOQiGs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,35 @@
+{
+  "name": "forest-fire-backend",
+  "version": "1.0.0",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node dist/app.js",
+    "dev": "nodemon --watch src --ext ts --exec ts-node src/app.ts"
+  },
+  "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/body-parser": "^1.19.2",
+    "@types/cors": "^2.8.13",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^1.4.7",
+    "@types/node": "^20.4.2",
+    "axios": "^1.12.2",
+    "bcryptjs": "^3.0.2",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "expo-server-sdk": "^3.15.0",
+    "express": "^4.18.2",
+    "firebase-admin": "^11.10.1",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.11.3",
+    "sequelize": "^6.37.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.2.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  }
+}
