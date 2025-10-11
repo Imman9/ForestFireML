@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 
 const roles = [
   { label: 'User', value: 'user' },
@@ -31,7 +32,9 @@ const SignUpScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     }
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/auth/register', {
+      const API_BASE_URL = (Constants.expoConfig?.extra as any)?.API_BASE_URL || '';
+      const url = `${API_BASE_URL}/auth/register`;
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password, role }),

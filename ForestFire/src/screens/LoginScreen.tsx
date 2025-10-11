@@ -39,16 +39,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleTestLogin = async () => {
-    try {
-      console.log('Attempting test login...');
-      await login('test@example.com', 'password');
-      console.log('Test login successful!');
-    } catch (error) {
-      console.error('Test login error:', error);
-      Alert.alert('Test Login Failed', error instanceof Error ? error.message : 'Unknown error');
-    }
-  };
+  // removed test login
 
   return (
     <KeyboardAvoidingView
@@ -108,16 +99,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
 
-          {/* Test Login Button for Development */}
-          <TouchableOpacity
-            style={styles.testLoginButton}
-            onPress={handleTestLogin}
-            disabled={isLoading}
-          >
-            <Text style={styles.testLoginButtonText}>
-              Test Login (test@example.com / password)
-            </Text>
-          </TouchableOpacity>
+          {/* removed test login button */}
 
           <TouchableOpacity style={styles.forgotPassword}>
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
@@ -202,19 +184,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  testLoginButton: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 12,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  testLoginButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
+  // removed test login styles
   forgotPassword: {
     alignItems: 'center',
     marginTop: 16,

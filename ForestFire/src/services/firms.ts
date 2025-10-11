@@ -17,7 +17,8 @@ interface FetchOptions {
 // VIIRS 375m NRT (NOAA-20 + Suomi NPP), last 24h CSV:
 // https://firms.modaps.eosdis.nasa.gov/data/active_fire/viirs/csv/VNP14IMGTDL_NRT_Global_24h.csv
 
-const API_BASE_URL = (Constants.expoConfig?.extra as any)?.API_BASE_URL || 'https://your-backend-url.com/api';
+const API_BASE_URL = (Constants.expoConfig?.extra as any)?.API_BASE_URL || 'https://192.168.100.158:5000/api';
+
 
 function parseCsv(csv: string, source: FIRMSSource): FIRMSFirePoint[] {
   const lines = csv.trim().split(/\r?\n/);

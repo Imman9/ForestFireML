@@ -8,10 +8,10 @@
     "userInterfaceStyle": "light",
     "scheme": "forestfiredetection",
     "extra": {
-      "API_BASE_URL": "http://192.168.100.1:5000/"
+      "API_BASE_URL": "http://192.168.100.158:5000/api"
     },
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },

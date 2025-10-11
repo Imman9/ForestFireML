@@ -30,7 +30,9 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/firms', firmsRouter);
 app.use('/api/weather', weatherRouter);
 
-sequelize.sync().then(() => {
+// In development, alter tables to match models automatically
+const syncOptions = process.env.NODE_ENV === 'production' ? {} : { alter: true };
+sequelize.sync(syncOptions).then(() => {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });

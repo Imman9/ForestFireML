@@ -17,6 +17,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { mlService } from '../services/api';
+import { classifyImage as classifyLocal } from '../services/localInference';
 import { MLPrediction } from '../types';
 
 const CameraDirections = {
@@ -77,7 +78,9 @@ const FireDetectionScreen: React.FC = () => {
 
     setIsAnalyzing(true);
     try {
-      const result = await mlService.predictFire(capturedImage);
+      // Try local TFLite inference first; if unavailable, fall back to remote
+      const local = await classifyLocal(capturedImage);
+      const result = local || (await mlService.predictFire(capturedImage));
       setPrediction(result);
     } catch (error) {
       Alert.alert('Analysis Failed', 'Failed to analyze image. Please try again.');
