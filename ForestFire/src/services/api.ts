@@ -9,6 +9,8 @@ import {
   mockWeatherService, 
   mockNotificationService 
 } from './mockApi';
+import * as FileSystem from "expo-file-system/legacy";
+
 
 const API_BASE_URL = (Constants.expoConfig?.extra as any)?.API_BASE_URL || 'http://localhost:5000/api';
 
@@ -18,7 +20,7 @@ const api = axios.create({
 });
 
 // Use mock services for now - replace with real API calls when backend is ready
-export const mlService = mockMlService;
+// export const mlService = mockMlService;
 export const fireReportService = mockFireReportService;
 export const weatherService = mockWeatherService;
 export const notificationService = mockNotificationService;
@@ -42,5 +44,20 @@ export const authService = {
     return JSON.parse(stored) as User;
   },
 };
+
+export const mlService = {
+  predictFire: async (uri: string) => {
+    const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
+
+    const response = await fetch("http://192.168.100.5:5000/api/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64 }),
+    });
+
+    return await response.json(); // { hasFire, confidence }
+  },
+};
+
 
 export default api; 

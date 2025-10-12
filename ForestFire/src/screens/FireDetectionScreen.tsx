@@ -81,12 +81,16 @@ const FireDetectionScreen: React.FC = () => {
       // Try local TFLite inference first; if unavailable, fall back to remote
       const local = await classifyLocal(capturedImage);
       const result = local || (await mlService.predictFire(capturedImage));
+      result.confidence = result.confidence * 100;
       setPrediction(result);
+      console.log("🔥 Prediction Result:", result);
+
     } catch (error) {
       Alert.alert('Analysis Failed', 'Failed to analyze image. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }
+    
   };
 
   const resetCamera = () => {
@@ -215,14 +219,15 @@ const FireDetectionScreen: React.FC = () => {
                     style={[
                       styles.confidenceFill,
                       {
-                        width: `${prediction.confidence}%`,
-                        backgroundColor: getRiskColor(prediction.confidence),
+                        width: `${prediction.confidence || 0}%`,
+                        backgroundColor: getRiskColor(prediction.confidence || 0),
                       },
                     ]}
                   />
                 </View>
                 <Text style={styles.confidenceText}>
-                  {prediction.confidence.toFixed(1)}%
+                {Number(prediction.confidence || 0).toFixed(1)}%
+
                 </Text>
               </View>
 
@@ -234,7 +239,7 @@ const FireDetectionScreen: React.FC = () => {
                     { color: getRiskColor(prediction.confidence) },
                   ]}
                 >
-                  {getRiskLevel(prediction.confidence)}
+                  {getRiskLevel(prediction.confidence || 0)}
                 </Text>
               </View>
 
