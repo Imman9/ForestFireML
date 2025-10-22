@@ -12,7 +12,7 @@ router.post("/", async (req: Request, res: Response) => {
   }
 
   try {
-    const response = await axios.post(" https://wrapping-began-diego-emotions.trycloudflare.com/predict ", { image });
+    const response = await axios.post("  https://linda-bluetooth-aircraft-qualifying.trycloudflare.com/predict ", { image });
     return res.json(response.data);
   } catch (err) {
     return res.status(500).json({ error: "Failed to contact ML server" });

@@ -2,14 +2,8 @@ import axios from 'axios';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FireReport, MLPrediction, WeatherData, User } from '../types';
-import { 
-  mockAuthService, 
-  mockMlService, 
-  mockFireReportService, 
-  mockWeatherService, 
-  mockNotificationService 
-} from './mockApi';
 import * as FileSystem from "expo-file-system/legacy";
+import { realWeatherService, realFireReportService, realNotificationService } from './realApi';
 
 
 const API_BASE_URL = (Constants.expoConfig?.extra as any)?.API_BASE_URL || 'http://localhost:5000/api';
@@ -19,11 +13,10 @@ const api = axios.create({
   timeout: 30000,
 });
 
-// Use mock services for now - replace with real API calls when backend is ready
 // export const mlService = mockMlService;
-export const fireReportService = mockFireReportService;
-export const weatherService = mockWeatherService;
-export const notificationService = mockNotificationService;
+export const fireReportService = realFireReportService;
+export const weatherService = realWeatherService;
+export const notificationService = realNotificationService;
 
 // Real auth service wired to backend
 export const authService = {

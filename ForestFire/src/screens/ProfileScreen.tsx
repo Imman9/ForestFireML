@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,59 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
+  Linking,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
+import * as Notifications from 'expo-notifications';
 import { useAuth } from '../contexts/AuthContext';
+import { fireReportService } from '../services/api';
 
-const ProfileScreen: React.FC = () => {
+interface ProfileScreenProps {
+  navigation?: any;
+}
+
+const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const { user, logout } = useAuth();
+  const [userReportsCount, setUserReportsCount] = useState<number>(0);
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(false);
+  const [locationEnabled, setLocationEnabled] = useState<boolean>(false);
+  const [cameraEnabled, setCameraEnabled] = useState<boolean>(false);
+
+  useEffect(() => {
+    loadUserStats();
+    checkPermissions();
+  }, []);
+
+  const loadUserStats = async () => {
+    try {
+      const reports = await fireReportService.getReports();
+      const userReports = reports.filter(report => report.userId === user?.id);
+      setUserReportsCount(userReports.length);
+    } catch (error) {
+      console.error('Failed to load user stats:', error);
+    }
+  };
+
+  const checkPermissions = async () => {
+    try {
+      // Check notification permissions
+      const notifSettings = await Notifications.getPermissionsAsync();
+      setNotificationsEnabled(notifSettings.granted);
+
+      // Check location permissions
+      const locationStatus = await Location.getForegroundPermissionsAsync();
+      setLocationEnabled(locationStatus.granted);
+
+      // Check camera permissions
+      const cameraStatus = await ImagePicker.getCameraPermissionsAsync();
+      setCameraEnabled(cameraStatus.granted);
+    } catch (error) {
+      console.error('Failed to check permissions:', error);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -34,7 +81,7 @@ const ProfileScreen: React.FC = () => {
   const handleEmergencyCall = () => {
     Alert.alert(
       'Emergency Services',
-      'Call emergency services?',
+      'Call emergency services immediately?',
       [
         {
           text: 'Cancel',
@@ -42,13 +89,176 @@ const ProfileScreen: React.FC = () => {
         },
         {
           text: 'Call 911',
-          onPress: () => {
-            // In a real app, you'd use Linking to make a phone call
-            console.log('Calling emergency services...');
+          style: 'destructive',
+          onPress: async () => {
+            const phoneNumber = Platform.OS === 'ios' ? 'telprompt:911' : 'tel:911';
+            const canCall = await Linking.canOpenURL(phoneNumber);
+            if (canCall) {
+              Linking.openURL(phoneNumber);
+            } else {
+              Alert.alert('Error', 'Unable to make phone calls on this device');
+            }
           },
         },
       ]
     );
+  };
+
+  const handleFireSafetyTips = () => {
+    Alert.alert(
+      'Fire Safety Tips',
+      ' Prevention:\n• Clear dry vegetation around property\n• Properly dispose of cigarettes\n• Never leave fires unattended\n\n If You See a Fire:\n• Call 911 immediately\n• Report exact location\n• Evacuate if nearby\n• Do not attempt to fight large fires\n\n Evacuation:\n• Have an escape plan\n• Keep important documents ready\n• Alert neighbors\n• Follow official evacuation orders',
+      [{ text: 'Got it', style: 'default' }]
+    );
+  };
+
+  const handleNotificationSettings = async () => {
+    const { status } = await Notifications.getPermissionsAsync();
+    
+    if (status === 'granted') {
+      Alert.alert(
+        'Notifications',
+        'Notifications are currently enabled. You can disable them in your device settings.',
+        [
+          { text: 'OK' },
+          { 
+            text: 'Open Settings', 
+            onPress: () => Linking.openSettings() 
+          }
+        ]
+      );
+    } else {
+      Alert.alert(
+        'Enable Notifications',
+        'Get alerts about nearby fires and important updates.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Enable',
+            onPress: async () => {
+              const { status: newStatus } = await Notifications.requestPermissionsAsync();
+              setNotificationsEnabled(newStatus === 'granted');
+              if (newStatus === 'granted') {
+                Alert.alert('Success', 'Notifications enabled successfully');
+              }
+            }
+          }
+        ]
+      );
+    }
+  };
+
+  const handleLocationSettings = async () => {
+    const { status } = await Location.getForegroundPermissionsAsync();
+    
+    if (status === 'granted') {
+      Alert.alert(
+        'Location Services',
+        'Location access is currently enabled. You can change this in your device settings.',
+        [
+          { text: 'OK' },
+          { 
+            text: 'Open Settings', 
+            onPress: () => Linking.openSettings() 
+          }
+        ]
+      );
+    } else {
+      Alert.alert(
+        'Enable Location',
+        'Location access is needed to report fires and get weather data.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Enable',
+            onPress: async () => {
+              const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
+              setLocationEnabled(newStatus === 'granted');
+              if (newStatus === 'granted') {
+                Alert.alert('Success', 'Location access enabled successfully');
+              }
+            }
+          }
+        ]
+      );
+    }
+  };
+
+  const handleCameraSettings = async () => {
+    const { status } = await ImagePicker.getCameraPermissionsAsync();
+    
+    if (status === 'granted') {
+      Alert.alert(
+        'Camera Permissions',
+        'Camera access is currently enabled. You can change this in your device settings.',
+        [
+          { text: 'OK' },
+          { 
+            text: 'Open Settings', 
+            onPress: () => Linking.openSettings() 
+          }
+        ]
+      );
+    } else {
+      Alert.alert(
+        'Enable Camera',
+        'Camera access is needed to take photos of fires when reporting.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Enable',
+            onPress: async () => {
+              const { status: newStatus } = await ImagePicker.requestCameraPermissionsAsync();
+              setCameraEnabled(newStatus === 'granted');
+              if (newStatus === 'granted') {
+                Alert.alert('Success', 'Camera access enabled successfully');
+              }
+            }
+          }
+        ]
+      );
+    }
+  };
+
+  const handleHelp = () => {
+    Alert.alert(
+      'Help & FAQ',
+      'How can we help you?\n\n• How to report a fire\n• Understanding fire risk levels\n• Using the map feature\n• Account settings\n• Emergency procedures',
+      [{ text: 'Close' }]
+    );
+  };
+
+  const handleContactSupport = () => {
+    const email = 'support@forestfire.com';
+    const subject = 'Support Request';
+    const body = `Hello,\n\nI need help with:\n\n[Describe your issue here]\n\n---\nUser: ${user?.name}\nEmail: ${user?.email}`;
+    
+    const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(url);
+        } else {
+          Alert.alert('Error', 'Unable to open email client. Please email us at support@forestfire.com');
+        }
+      });
+  };
+
+  const handlePrivacyPolicy = () => {
+    Alert.alert(
+      'Privacy Policy',
+      'Forest Fire Detection App Privacy Policy\n\n• We collect location data only when reporting fires\n• Photos are stored securely\n• Personal information is encrypted\n• We do not share data with third parties\n• You can delete your account anytime\n\nFor full privacy policy, visit: forestfire.com/privacy',
+      [{ text: 'Close' }]
+    );
+  };
+
+  const getPermissionStatus = (enabled: boolean) => {
+    return enabled ? ' Enabled' : ' Disabled';
+  };
+
+  const getPermissionColor = (enabled: boolean) => {
+    return enabled ? '#00CC00' : '#FF8800';
   };
 
   const getRoleDisplayName = (role: string) => {
@@ -95,7 +305,7 @@ const ProfileScreen: React.FC = () => {
           <Ionicons name="chevron-forward" size={20} color="#666" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity style={styles.actionButton} onPress={handleFireSafetyTips}>
           <View style={styles.actionIcon}>
             <Ionicons name="shield-checkmark" size={24} color="#00CC00" />
           </View>
@@ -107,39 +317,66 @@ const ProfileScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
+      {/* User Statistics */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>My Activity</Text>
+        
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Ionicons name="flame" size={32} color="#FF6B35" />
+            <Text style={styles.statNumber}>{userReportsCount}</Text>
+            <Text style={styles.statLabel}>Reports Submitted</Text>
+          </View>
+          
+          <View style={styles.statDivider} />
+          
+          <View style={styles.statItem}>
+            <Ionicons name="shield-checkmark" size={32} color="#00CC00" />
+            <Text style={styles.statNumber}>{user?.role === 'admin' || user?.role === 'ranger' ? 'Admin' : 'Active'}</Text>
+            <Text style={styles.statLabel}>Account Status</Text>
+          </View>
+        </View>
+      </View>
+
       {/* App Settings */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>App Settings</Text>
         
-        <TouchableOpacity style={styles.settingButton}>
+        <TouchableOpacity style={styles.settingButton} onPress={handleNotificationSettings}>
           <View style={styles.settingIcon}>
             <Ionicons name="notifications" size={24} color="#FF6B35" />
           </View>
           <View style={styles.settingContent}>
             <Text style={styles.settingTitle}>Notifications</Text>
-            <Text style={styles.settingSubtitle}>Manage alert preferences</Text>
+            <Text style={[styles.settingSubtitle, { color: getPermissionColor(notificationsEnabled) }]}>
+              {getPermissionStatus(notificationsEnabled)}
+            </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#666" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingButton}>
+        <TouchableOpacity style={styles.settingButton} onPress={handleLocationSettings}>
           <View style={styles.settingIcon}>
             <Ionicons name="location" size={24} color="#FF6B35" />
           </View>
           <View style={styles.settingContent}>
             <Text style={styles.settingTitle}>Location Services</Text>
-            <Text style={styles.settingSubtitle}>Manage location permissions</Text>
+            <Text style={[styles.settingSubtitle, { color: getPermissionColor(locationEnabled) }]}>
+              {getPermissionStatus(locationEnabled)}
+            </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#666" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingButton}>
+        <TouchableOpacity style={styles.settingButton} onPress={handleCameraSettings}>
           <View style={styles.settingIcon}>
             <Ionicons name="camera" size={24} color="#FF6B35" />
           </View>
           <View style={styles.settingContent}>
             <Text style={styles.settingTitle}>Camera Permissions</Text>
-            <Text style={styles.settingSubtitle}>Manage camera access</Text>
+            <Text style={[styles.settingSubtitle, { color: getPermissionColor(cameraEnabled) }]}>
+              {getPermissionStatus(cameraEnabled)}
+            </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#666" />
         </TouchableOpacity>
@@ -169,7 +406,7 @@ const ProfileScreen: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Support</Text>
         
-        <TouchableOpacity style={styles.supportButton}>
+        <TouchableOpacity style={styles.supportButton} onPress={handleHelp}>
           <View style={styles.supportIcon}>
             <Ionicons name="help-circle" size={24} color="#FF6B35" />
           </View>
@@ -180,7 +417,7 @@ const ProfileScreen: React.FC = () => {
           <Ionicons name="chevron-forward" size={20} color="#666" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.supportButton}>
+        <TouchableOpacity style={styles.supportButton} onPress={handleContactSupport}>
           <View style={styles.supportIcon}>
             <Ionicons name="mail" size={24} color="#FF6B35" />
           </View>
@@ -191,7 +428,7 @@ const ProfileScreen: React.FC = () => {
           <Ionicons name="chevron-forward" size={20} color="#666" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.supportButton}>
+        <TouchableOpacity style={styles.supportButton} onPress={handlePrivacyPolicy}>
           <View style={styles.supportIcon}>
             <Ionicons name="document-text" size={24} color="#FF6B35" />
           </View>
@@ -369,6 +606,33 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 8,
   },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 8,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  statDivider: {
+    width: 1,
+    height: 60,
+    backgroundColor: '#eee',
+  },
 });
 
-export default ProfileScreen; 
+export default ProfileScreen;

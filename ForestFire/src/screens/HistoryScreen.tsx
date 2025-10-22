@@ -7,15 +7,23 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FireReport } from '../types';
 import { fireReportService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const HistoryScreen: React.FC = () => {
+  const { user } = useAuth();
   const [reports, setReports] = useState<FireReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'confirmed' | 'resolved'>('all');
+  const [selectedReport, setSelectedReport] = useState<FireReport | null>(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+
+  const isAdmin = user?.role === 'admin' || user?.role === 'ranger';
 
   useEffect(() => {
     loadReports();
@@ -74,6 +82,33 @@ const HistoryScreen: React.FC = () => {
     });
   };
 
+  const handleStatusChange = (report: FireReport) => {
+    setSelectedReport(report);
+    setShowStatusModal(true);
+  };
+
+  const updateStatus = async (newStatus: FireReport['status']) => {
+    if (!selectedReport) return;
+
+    try {
+      setShowStatusModal(false);
+      const updatedReport = await fireReportService.updateReportStatus(selectedReport.id, newStatus);
+
+      // Update the report in the list
+      setReports(prevReports =>
+        prevReports.map(report =>
+          report.id === updatedReport.id ? updatedReport : report
+        )
+      );
+
+      Alert.alert('Success', `Report status updated to ${newStatus}`);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update report status');
+    } finally {
+      setSelectedReport(null);
+    }
+  };
+
   const renderReportItem = ({ item }: { item: FireReport }) => (
     <TouchableOpacity style={styles.reportItem}>
       <View style={styles.reportHeader}>
@@ -99,7 +134,7 @@ const HistoryScreen: React.FC = () => {
           <Ionicons name="person" size={16} color="#666" />
           <Text style={styles.reportMetaText}>{item.userName}</Text>
         </View>
-        
+
         {item.confidence && (
           <View style={styles.reportMeta}>
             <Ionicons name="analytics" size={16} color="#666" />
@@ -120,6 +155,16 @@ const HistoryScreen: React.FC = () => {
             </Text>
           </View>
         </View>
+      )}
+
+      {isAdmin && (
+        <TouchableOpacity
+          style={styles.changeStatusButton}
+          onPress={() => handleStatusChange(item)}
+        >
+          <Ionicons name="create-outline" size={16} color="#FF6B35" />
+          <Text style={styles.changeStatusText}>Change Status</Text>
+        </TouchableOpacity>
       )}
     </TouchableOpacity>
   );
@@ -173,7 +218,7 @@ const HistoryScreen: React.FC = () => {
             <Ionicons name="document-text-outline" size={64} color="#ccc" />
             <Text style={styles.emptyTitle}>No Reports Found</Text>
             <Text style={styles.emptySubtitle}>
-              {filter === 'all' 
+              {filter === 'all'
                 ? 'No fire reports have been submitted yet.'
                 : `No ${filter} fire reports found.`
               }
@@ -181,6 +226,60 @@ const HistoryScreen: React.FC = () => {
           </View>
         }
       />
+
+      {/* Status Change Modal */}
+      <Modal
+        visible={showStatusModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowStatusModal(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowStatusModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Change Report Status</Text>
+            <Text style={styles.modalSubtitle}>
+              Current: {selectedReport && getStatusText(selectedReport.status)}
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.statusOption, selectedReport?.status === 'unverified' && styles.statusOptionDisabled]}
+              onPress={() => updateStatus('unverified')}
+              disabled={selectedReport?.status === 'unverified'}
+            >
+              <Ionicons name="help-circle" size={24} color="#FF8800" />
+              <Text style={styles.statusOptionText}>Unverified</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.statusOption, selectedReport?.status === 'confirmed' && styles.statusOptionDisabled]}
+              onPress={() => updateStatus('confirmed')}
+              disabled={selectedReport?.status === 'confirmed'}
+            >
+              <Ionicons name="flame" size={24} color="#FF4444" />
+              <Text style={styles.statusOptionText}>Confirmed</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.statusOption, selectedReport?.status === 'resolved' && styles.statusOptionDisabled]}
+              onPress={() => updateStatus('resolved')}
+              disabled={selectedReport?.status === 'resolved'}
+            >
+              <Ionicons name="checkmark-circle" size={24} color="#00CC00" />
+              <Text style={styles.statusOptionText}>Resolved</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              onPress={() => setShowStatusModal(false)}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -348,6 +447,77 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     paddingHorizontal: 32,
+  },
+  changeStatusButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#FF6B35',
+    borderRadius: 8,
+    backgroundColor: '#FFF5F0',
+  },
+  changeStatusText: {
+    marginLeft: 6,
+    color: '#FF6B35',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  statusOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  statusOptionDisabled: {
+    opacity: 0.5,
+    backgroundColor: '#e9ecef',
+  },
+  statusOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 12,
+  },
+  modalCancelButton: {
+    marginTop: 8,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
   },
 });
 

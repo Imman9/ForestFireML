@@ -3,11 +3,15 @@ import { DataTypes, Model, Optional, Sequelize } from 'sequelize';
 export interface FireReportAttributes {
   id: string;
   userId: string;
+  userName: string;
   imageUrl: string;
   locationLat: number;
   locationLng: number;
+  address?: string;
   description: string;
   status: 'unverified' | 'confirmed' | 'resolved';
+  confidence?: number;
+  weatherData?: string; // JSON string
   timestamp: Date;
 }
 
@@ -16,11 +20,15 @@ export interface FireReportCreationAttributes extends Optional<FireReportAttribu
 export class FireReport extends Model<FireReportAttributes, FireReportCreationAttributes> implements FireReportAttributes {
   public id!: string;
   public userId!: string;
+  public userName!: string;
   public imageUrl!: string;
   public locationLat!: number;
   public locationLng!: number;
+  public address?: string;
   public description!: string;
   public status!: 'unverified' | 'confirmed' | 'resolved';
+  public confidence?: number;
+  public weatherData?: string;
   public timestamp!: Date;
 }
 
@@ -36,7 +44,15 @@ export function initFireReportModel(sequelize: Sequelize) {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      userName: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
       imageUrl: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      address: {
         type: DataTypes.STRING,
         allowNull: true,
       },
@@ -56,6 +72,14 @@ export function initFireReportModel(sequelize: Sequelize) {
         type: DataTypes.ENUM('unverified', 'confirmed', 'resolved'),
         allowNull: false,
         defaultValue: 'unverified',
+      },
+      confidence: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+      },
+      weatherData: {
+        type: DataTypes.TEXT,
+        allowNull: true,
       },
       timestamp: {
         type: DataTypes.DATE,
