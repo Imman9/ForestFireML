@@ -14,8 +14,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
-import { fireReportService, weatherService } from '../services/api';
-import { FireReport, WeatherData } from '../types';
+import { fireReportService, weatherService, mlService } from '../services/api';
+import { FireReport, WeatherData, MLPrediction } from '../types';
 
 interface ReportFireScreenProps {
   navigation?: any;
@@ -30,6 +30,10 @@ const ReportFireScreen: React.FC<ReportFireScreenProps> = ({ navigation }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  
+  // Verification State
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<MLPrediction | null>(null);
 
   useEffect(() => {
     getCurrentLocation();
@@ -96,6 +100,7 @@ const ReportFireScreen: React.FC<ReportFireScreenProps> = ({ navigation }) => {
 
       if (!result.canceled && result.assets[0]) {
         setImage(result.assets[0].uri);
+        verifyImage(result.assets[0].uri);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to pick image');
@@ -118,10 +123,51 @@ const ReportFireScreen: React.FC<ReportFireScreenProps> = ({ navigation }) => {
 
       if (!result.canceled && result.assets[0]) {
         setImage(result.assets[0].uri);
+        verifyImage(result.assets[0].uri);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to take photo');
     }
+  };
+
+  const verifyImage = async (uri: string) => {
+    setIsVerifying(true);
+    setVerificationResult(null);
+    try {
+      let result = await mlService.predictFire(uri);
+      console.log('ML Prediction Result:', JSON.stringify(result, null, 2));
+
+      // Handle confidence as string or number
+      if (result && result.confidence !== undefined) {
+          if (typeof result.confidence === 'string') {
+              result.confidence = parseFloat(result.confidence);
+          }
+      }
+
+      // Validate result structure
+      if (!result || typeof result.confidence !== 'number' || isNaN(result.confidence)) {
+        console.warn('Invalid prediction result received:', result);
+        // Fail silently or set a status, but don't throw to avoid disrupting flow if not critical
+        return;
+      }
+
+      // Ensure confidence is 0-100
+      if (result.confidence <= 1) { // if decimal 0.95
+         result.confidence = result.confidence * 100;
+      }
+      setVerificationResult(result);
+    } catch (error) {
+      console.error('Verification failed:', error);
+      // Optional: Alert user or just fail silently regarding verification
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const getVerificationLevel = (confidence: number) => {
+    if (confidence >= 80) return { label: 'High Confidence', color: '#FF4444' };
+    if (confidence >= 50) return { label: 'Moderate Confidence', color: '#FF8800' };
+    return { label: 'Low Confidence / Unverified', color: '#666' };
   };
 
   const handleSubmit = async () => {
@@ -149,6 +195,7 @@ const ReportFireScreen: React.FC<ReportFireScreenProps> = ({ navigation }) => {
         imageUrl: image,
         description: description.trim() || undefined,
         status: 'unverified' as const,
+        confidence: verificationResult?.confidence,
         weatherData: weatherData || undefined,
       };
 
@@ -160,7 +207,7 @@ const ReportFireScreen: React.FC<ReportFireScreenProps> = ({ navigation }) => {
         [
           {
             text: 'OK',
-            onPress: () => navigation?.goBack(),
+            onPress: handleBack,
           },
         ]
       );
@@ -186,10 +233,19 @@ const ReportFireScreen: React.FC<ReportFireScreenProps> = ({ navigation }) => {
     }
   };
 
+  const handleBack = () => {
+    if (navigation?.canGoBack()) {
+      navigation.goBack();
+    } else {
+      // Fallback to Map tab if we can't go back
+      navigation.navigate('Map');
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.title}>Report Fire</Text>
@@ -257,6 +313,29 @@ const ReportFireScreen: React.FC<ReportFireScreenProps> = ({ navigation }) => {
         {image ? (
           <View style={styles.imageContainer}>
             <Image source={{ uri: image }} style={styles.selectedImage} />
+            
+            {/* Verification Result UI */}
+            <View style={styles.verificationContainer}>
+               {isVerifying ? (
+                 <View style={styles.verifyingRow}>
+                   <ActivityIndicator size="small" color="#FF6B35" />
+                   <Text style={styles.verifyingText}>Verifying image...</Text>
+                 </View>
+               ) : verificationResult && typeof verificationResult.confidence === 'number' ? (
+                 <View style={styles.resultRow}>
+                    <Text style={styles.confidenceLabel}>ML Verification:</Text>
+                    <View style={styles.confidenceBadge}>
+                      <Text style={[styles.confidenceValue, { color: getVerificationLevel(verificationResult.confidence).color }]}>
+                        {verificationResult.confidence.toFixed(1)}%
+                      </Text>
+                      <Text style={[styles.riskLevel, { color: getVerificationLevel(verificationResult.confidence).color }]}>
+                        {getVerificationLevel(verificationResult.confidence).label}
+                      </Text>
+                    </View>
+                 </View>
+               ) : null}
+            </View>
+
             <TouchableOpacity style={styles.changeImageButton} onPress={pickImage}>
               <Text style={styles.changeImageText}>Change Photo</Text>
             </TouchableOpacity>
@@ -428,6 +507,44 @@ const styles = StyleSheet.create({
   changeImageText: {
     color: '#FF6B35',
     fontSize: 14,
+  },
+  verificationContainer: {
+    width: '100%',
+    padding: 12,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  verifyingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  verifyingText: {
+    marginLeft: 8,
+    color: '#666',
+  },
+  resultRow: {
+    alignItems: 'center',
+  },
+  confidenceLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  confidenceBadge: {
+    alignItems: 'center',
+  },
+  confidenceValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  riskLevel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 2,
   },
   photoButtons: {
     flexDirection: 'row',

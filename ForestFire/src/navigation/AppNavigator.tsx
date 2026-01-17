@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 // Screens
 import LoginScreen from '../screens/LoginScreen';
-import FireDetectionScreen from '../screens/FireDetectionScreen';
+// import FireDetectionScreen from '../screens/FireDetectionScreen';
 import FireMapScreen from '../screens/FireMapScreen';
 import ReportFireScreen from '../screens/ReportFireScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -24,8 +24,8 @@ const MainTabNavigator = () => {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap;
 
-          if (route.name === 'Detection') {
-            iconName = focused ? 'camera' : 'camera-outline';
+          if (route.name === 'Report') {
+            iconName = focused ? 'add-circle' : 'add-circle-outline';
           } else if (route.name === 'Map') {
             iconName = focused ? 'map' : 'map-outline';
           } else if (route.name === 'History') {
@@ -44,9 +44,9 @@ const MainTabNavigator = () => {
       })}
     >
       <Tab.Screen 
-        name="Detection" 
-        component={FireDetectionScreen}
-        options={{ title: 'Fire Detection' }}
+        name="Report" 
+        component={ReportFireScreen}
+        options={{ title: 'Report Fire' }}
       />
       <Tab.Screen 
         name="Map" 
@@ -76,7 +76,7 @@ const AppNavigator = () => {
         {user ? (
           <>
             <Stack.Screen name="Main" component={MainTabNavigator} />
-            <Stack.Screen 
+            {/* <Stack.Screen 
               name="ReportFire" 
               component={ReportFireScreen}
               options={{ 
@@ -85,7 +85,7 @@ const AppNavigator = () => {
                 headerStyle: { backgroundColor: '#FF6B35' },
                 headerTintColor: '#fff',
               }}
-            />
+            /> */}
           </>
         ) : (
           <>

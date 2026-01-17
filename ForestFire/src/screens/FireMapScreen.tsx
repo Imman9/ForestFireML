@@ -136,7 +136,8 @@ const FireMapScreen: React.FC<FireMapScreenProps> = ({ navigation }) => {
 
   const handleReportFire = () => {
     if (navigation) {
-      navigation.navigate('ReportFire');
+      // Navigate to the Report tab
+      navigation.navigate('Report');
     } else {
       Alert.alert('Navigation Error', 'Navigation not available');
     }

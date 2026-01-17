@@ -42,7 +42,15 @@ export const mlService = {
   predictFire: async (uri: string) => {
     const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
 
-    const response = await fetch("http://192.168.100.5:5000/api/predict", {
+    // Use the dynamic API_BASE_URL defined above, appending /predict
+    // Note: API_BASE_URL includes /api, so we just append /predict if it's not already there?
+    // Actually API_BASE_URL is '.../api', and the route is '/predict', so it would be '.../api/predict'
+    // But let's check how other services use it. `api` axios instance uses API_BASE_URL.
+    // We can use the same base URL.
+    
+    const url = `${API_BASE_URL}/predict`;
+
+    const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ image: base64 }),
