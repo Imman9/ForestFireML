@@ -4,6 +4,8 @@ import axios from "axios";
 
 const router = Router();
 
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:8000";
+
 router.post("/", async (req: Request, res: Response) => {
   const { image } = req.body;
 
@@ -12,10 +14,12 @@ router.post("/", async (req: Request, res: Response) => {
   }
 
   try {
-    const response = await axios.post("https://lives-mary-bus-distance.trycloudflare.com/api/predict", { image });
+    // Forward request to Python ML Service
+    const response = await axios.post(`${ML_SERVICE_URL}/predict`, { image });
     return res.json(response.data);
-  } catch (err) {
-    return res.status(500).json({ error: "Failed to contact ML server" });
+  } catch (err: any) {
+    console.error("ML Service Error:", err.message);
+    return res.status(500).json({ error: "Failed to contact ML server", details: err.message });
   }
 });
 
