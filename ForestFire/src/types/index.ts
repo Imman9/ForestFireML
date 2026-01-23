@@ -20,10 +20,11 @@ export interface FireReport {
   };
   imageUrl?: string;
   description?: string;
-  status: 'unverified' | 'confirmed' | 'resolved';
+  status: 'unverified' | 'confirmed' | 'false_alarm' | 'needs_monitoring' | 'resolved';
   confidence?: number;
   timestamp: Date;
   weatherData?: WeatherData;
+  notes?: string;
 }
 
 export interface WeatherData {

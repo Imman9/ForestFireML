@@ -17,9 +17,11 @@ const sequelize = new Sequelize(
 
 import { initFireReportModel, FireReport } from './FireReport';
 import { initUserModel, User } from './User';
+import { initSystemSettingModel, SystemSetting } from './SystemSetting';
 
 initFireReportModel(sequelize);
 initUserModel(sequelize);
+initSystemSettingModel(sequelize);
 
-export { sequelize, FireReport, User };
+export { sequelize, FireReport, User, SystemSetting };
 export default sequelize; 

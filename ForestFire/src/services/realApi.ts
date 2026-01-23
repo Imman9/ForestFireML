@@ -51,9 +51,9 @@ export const realFireReportService = {
     }
   },
 
-  updateReportStatus: async (reportId: string, status: FireReport['status']): Promise<FireReport> => {
+  updateReportStatus: async (reportId: string, status: FireReport['status'], notes?: string): Promise<FireReport> => {
     try {
-      const response = await api.patch(`/fire-reports/${reportId}/status`, { status });
+      const response = await api.patch(`/fire-reports/${reportId}/status`, { status, notes });
       return response.data;
     } catch (error) {
       console.error('Failed to update report status:', error);

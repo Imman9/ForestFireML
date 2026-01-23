@@ -9,9 +9,10 @@ export interface FireReportAttributes {
   locationLng: number;
   address?: string;
   description: string;
-  status: 'unverified' | 'confirmed' | 'resolved';
+  status: 'unverified' | 'confirmed' | 'false_alarm' | 'needs_monitoring' | 'resolved';
   confidence?: number;
   weatherData?: string; // JSON string
+  notes?: string;
   timestamp: Date;
 }
 
@@ -26,9 +27,10 @@ export class FireReport extends Model<FireReportAttributes, FireReportCreationAt
   public locationLng!: number;
   public address?: string;
   public description!: string;
-  public status!: 'unverified' | 'confirmed' | 'resolved';
+  public status!: 'unverified' | 'confirmed' | 'false_alarm' | 'needs_monitoring' | 'resolved';
   public confidence?: number;
   public weatherData?: string;
+  public notes?: string;
   public timestamp!: Date;
 }
 
@@ -69,7 +71,7 @@ export function initFireReportModel(sequelize: Sequelize) {
         allowNull: true,
       },
       status: {
-        type: DataTypes.ENUM('unverified', 'confirmed', 'resolved'),
+        type: DataTypes.ENUM('unverified', 'confirmed', 'false_alarm', 'needs_monitoring', 'resolved'),
         allowNull: false,
         defaultValue: 'unverified',
       },
@@ -78,6 +80,10 @@ export function initFireReportModel(sequelize: Sequelize) {
         allowNull: true,
       },
       weatherData: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      notes: {
         type: DataTypes.TEXT,
         allowNull: true,
       },

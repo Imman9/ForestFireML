@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FireReport } from '../types';
@@ -22,6 +23,7 @@ const HistoryScreen: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'confirmed' | 'resolved'>('all');
   const [selectedReport, setSelectedReport] = useState<FireReport | null>(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [notes, setNotes] = useState('');
 
   const isAdmin = user?.role === 'admin' || user?.role === 'ranger';
 
@@ -84,6 +86,7 @@ const HistoryScreen: React.FC = () => {
 
   const handleStatusChange = (report: FireReport) => {
     setSelectedReport(report);
+    setNotes(report.notes || '');
     setShowStatusModal(true);
   };
 
@@ -92,7 +95,7 @@ const HistoryScreen: React.FC = () => {
 
     try {
       setShowStatusModal(false);
-      const updatedReport = await fireReportService.updateReportStatus(selectedReport.id, newStatus);
+      const updatedReport = await fireReportService.updateReportStatus(selectedReport.id, newStatus, notes);
 
       // Update the report in the list
       setReports(prevReports =>
@@ -244,28 +247,49 @@ const HistoryScreen: React.FC = () => {
               Current: {selectedReport && getStatusText(selectedReport.status)}
             </Text>
 
+            <TextInput
+              style={styles.notesInput}
+              placeholder="Add notes (e.g., 'Controlled burn')"
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+            />
+
             <TouchableOpacity
-              style={[styles.statusOption, selectedReport?.status === 'unverified' && styles.statusOptionDisabled]}
+              style={[styles.statusOption, { borderLeftColor: '#FF8800', borderLeftWidth: 4 }]}
               onPress={() => updateStatus('unverified')}
-              disabled={selectedReport?.status === 'unverified'}
             >
               <Ionicons name="help-circle" size={24} color="#FF8800" />
               <Text style={styles.statusOptionText}>Unverified</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.statusOption, selectedReport?.status === 'confirmed' && styles.statusOptionDisabled]}
+              style={[styles.statusOption, { borderLeftColor: '#FF4444', borderLeftWidth: 4 }]}
               onPress={() => updateStatus('confirmed')}
-              disabled={selectedReport?.status === 'confirmed'}
             >
               <Ionicons name="flame" size={24} color="#FF4444" />
               <Text style={styles.statusOptionText}>Confirmed</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.statusOption, selectedReport?.status === 'resolved' && styles.statusOptionDisabled]}
+              style={[styles.statusOption, { borderLeftColor: '#FFBB33', borderLeftWidth: 4 }]}
+              onPress={() => updateStatus('needs_monitoring')}
+            >
+              <Ionicons name="eye" size={24} color="#FFBB33" />
+              <Text style={styles.statusOptionText}>Needs Monitoring</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.statusOption, { borderLeftColor: '#999', borderLeftWidth: 4 }]}
+              onPress={() => updateStatus('false_alarm')}
+            >
+              <Ionicons name="close-circle" size={24} color="#999" />
+              <Text style={styles.statusOptionText}>False Alarm</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.statusOption, { borderLeftColor: '#00CC00', borderLeftWidth: 4 }]}
               onPress={() => updateStatus('resolved')}
-              disabled={selectedReport?.status === 'resolved'}
             >
               <Ionicons name="checkmark-circle" size={24} color="#00CC00" />
               <Text style={styles.statusOptionText}>Resolved</Text>
@@ -518,6 +542,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     fontWeight: '600',
+  },
+  notesInput: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    height: 80,
+    textAlignVertical: 'top',
+    fontSize: 14,
+    color: '#333',
   },
 });
 

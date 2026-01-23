@@ -8,6 +8,7 @@ import predictRouter from './routes/predict';
 import notificationsRouter from './routes/notifications';
 import firmsRouter from './routes/firms';
 import weatherRouter from './routes/weather';
+import adminRouter from './routes/admin';
 import { sequelize } from './models';
 
 dotenv.config();
@@ -35,6 +36,7 @@ app.use('/api/predict', predictRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/firms', firmsRouter);
 app.use('/api/weather', weatherRouter);
+app.use('/api/admin', adminRouter);
 
 // In development, alter tables to match models automatically
 const syncOptions = process.env.NODE_ENV === 'production' ? {} : { alter: true };
