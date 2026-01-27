@@ -76,4 +76,15 @@ export interface NotificationData {
   body: string;
   data?: any;
   timestamp: Date;
+}
+
+export interface RiskPoint {
+  latitude: number;
+  longitude: number;
+  riskScore: number;
+  factors: {
+      userReports: number;
+      firmsData: number;
+      weatherMultiplier: number;
+  };
 } 

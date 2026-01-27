@@ -60,5 +60,16 @@ export const mlService = {
   },
 };
 
+export const rangersService = {
+  getRiskMap: async () => {
+    const res = await api.get('/rangers/risk-map');
+    return res.data;
+  },
+  validateReport: async (id: string) => {
+    const res = await api.post(`/rangers/reports/${id}/validate`);
+    return res.data;
+  }
+};
+
 
 export default api; 

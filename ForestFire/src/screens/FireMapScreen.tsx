@@ -11,8 +11,9 @@ import {
 } from 'react-native';
 import MapView, { Marker, Circle, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
-import { FireReport, WeatherData, FIRMSFirePoint } from '../types';
-import { fireReportService, weatherService } from '../services/api';
+import { FireReport, WeatherData, FIRMSFirePoint, RiskPoint } from '../types';
+import { fireReportService, weatherService, rangersService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { fetchFIRMSFires, TimeWindow } from '../services/firms';
 
 interface FireMapScreenProps {
@@ -20,7 +21,10 @@ interface FireMapScreenProps {
 }
 
 const FireMapScreen: React.FC<FireMapScreenProps> = ({ navigation }) => {
+  const { user } = useAuth();
   const [reports, setReports] = useState<FireReport[]>([]);
+  const [riskPoints, setRiskPoints] = useState<RiskPoint[]>([]);
+  const [rangerMode, setRangerMode] = useState(false);
   const [selectedReport, setSelectedReport] = useState<FireReport | null>(null);
   const [firmsFires, setFirmsFires] = useState<FIRMSFirePoint[]>([]);
   const [firmsEnabled, setFirmsEnabled] = useState(true);
@@ -48,6 +52,21 @@ const FireMapScreen: React.FC<FireMapScreenProps> = ({ navigation }) => {
     getCurrentLocation();
     if (firmsEnabled) loadFirms();
   }, []);
+
+  useEffect(() => {
+    if (user?.role === 'ranger' && rangerMode) {
+      loadRiskMap();
+    }
+  }, [user, rangerMode]);
+
+  const loadRiskMap = async () => {
+    try {
+      const points = await rangersService.getRiskMap();
+      setRiskPoints(points);
+    } catch (e) {
+      console.warn("Failed to load risk map");
+    }
+  };
 
   const getCurrentLocation = async () => {
     try {
@@ -201,6 +220,19 @@ const FireMapScreen: React.FC<FireMapScreenProps> = ({ navigation }) => {
           strokeColor="rgba(255, 68, 68, 0.5)"
           strokeWidth={2}
         />
+        {/* Ranger Risk Layer */}
+        {rangerMode && riskPoints.map((point, index) => (
+            <Circle
+              key={`risk-${index}`}
+              center={{ latitude: point.latitude, longitude: point.longitude }}
+              radius={point.riskScore * 100} // Radius scales with risk
+              fillColor={`rgba(255, 0, 0, ${Math.min(0.8, point.riskScore / 100)})`}
+              strokeColor="rgba(255, 0, 0, 0.8)"
+              strokeWidth={1}
+              zIndex={100}
+            />
+        ))}
+
       </MapView>
 
       {/* Floating Action Buttons */}
@@ -216,6 +248,15 @@ const FireMapScreen: React.FC<FireMapScreenProps> = ({ navigation }) => {
         <TouchableOpacity style={styles.fab} onPress={() => { setFirmsEnabled(v => !v); if (!firmsEnabled) loadFirms(); }}>
           <Ionicons name={firmsEnabled ? 'eye' : 'eye-off'} size={24} color="white" />
         </TouchableOpacity>
+
+        {user?.role === 'ranger' && (
+          <TouchableOpacity 
+            style={[styles.fab, rangerMode && { backgroundColor: '#FF4444' }]} 
+            onPress={() => setRangerMode(!rangerMode)}
+          >
+            <Ionicons name="shield-checkmark" size={24} color="white" />
+          </TouchableOpacity>
+        )}
       </View>
       {/* FIRMS window toggle */}
       <View style={styles.windowToggle}>
