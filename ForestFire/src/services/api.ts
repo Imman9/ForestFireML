@@ -49,6 +49,15 @@ export const authService = {
     if (!stored) throw new Error('No user');
     return JSON.parse(stored) as User;
   },
+  updateLocation: async (lat: number, lng: number): Promise<void> => {
+     // In a real app, you'd have an endpoint like POST /users/location or PUT /users/me
+     // For now, we'll assume there is one or verify if we need to add it to backend
+     try {
+       await api.patch('/auth/me/location', { lat, lng });
+     } catch (e) {
+       console.warn('Failed to update location', e);
+     }
+  }
 };
 
 export const mlService = {

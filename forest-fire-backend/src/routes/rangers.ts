@@ -1,9 +1,10 @@
 import { Router, Response } from 'express';
-import { FireReport, VerificationLog } from '../models';
+import { FireReport, VerificationLog, User } from '../models';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { requireRole } from '../middleware/roles';
 import { fetchFirmsData } from './firms';
 import { Op } from 'sequelize';
+import { Expo } from 'expo-server-sdk';
 
 const router = Router();
 
@@ -31,12 +32,10 @@ router.get('/risk-map', async (req: AuthRequest, res: Response) => {
         const userReports = await FireReport.findAll({
             where: {
                 status: { [Op.in]: ['confirmed', 'unverified'] },
-                // Optional: Filter by recent time (last 48h) to keep map relevant
             }
         });
 
         // 2. Fetch FIRMS Data (Real satellite detections)
-        // This is "Ground Truth" from space
         let firmsData: any[] = [];
         try {
             firmsData = await fetchFirmsData('VIIRS', '24h'); 
@@ -44,10 +43,7 @@ router.get('/risk-map', async (req: AuthRequest, res: Response) => {
             console.warn("Failed to fetch FIRMS data for risk map integration");
         }
 
-        // 3. Cluster/Aggregate Logic (Simplified Grid or Point-based)
-        // For this implementation, we will treat every verified report and firms point as a "Risk Center"
-        // and calculate its score.
-        
+        // 3. Cluster/Aggregate Logic
         const riskPoints: RiskPoint[] = [];
 
         // Process User Reports
@@ -57,10 +53,6 @@ router.get('/risk-map', async (req: AuthRequest, res: Response) => {
             
             // Base score for a report: 50 points * reliability
             score += 50 * reliability;
-
-            // TODO: In a real app, we would query Weather for this specific point here
-            // const weather = fetchWeather(report.locationLat, report.locationLng)
-            // if (weather.wind > 30) score *= 1.5;
 
             riskPoints.push({
                 latitude: report.locationLat,
@@ -76,24 +68,20 @@ router.get('/risk-map', async (req: AuthRequest, res: Response) => {
 
         // Process FIRMS Data
         firmsData.forEach(point => {
-            // FIRMS point format from CSV: latitude, longitude, confidence/bright_ti4/scan etc.
             const lat = parseFloat(point.latitude);
             const lng = parseFloat(point.longitude);
             
             if (isNaN(lat) || isNaN(lng)) return;
 
             // Check if this point is near an existing user report (Duplicate detection)
-            // Simple Euclidian distance check (approximate)
             const nearby = riskPoints.find(p => 
                 Math.abs(p.latitude - lat) < 0.01 && Math.abs(p.longitude - lng) < 0.01
             );
 
             if (nearby) {
-                // Reinforce existing risk point
                 nearby.riskScore += 30; // Add 30 points for Satellite confirmation
                 nearby.factors.firmsData += 1;
             } else {
-                // New Risk Point
                 riskPoints.push({
                     latitude: lat,
                     longitude: lng,
@@ -142,16 +130,54 @@ router.patch('/reports/:id/status', async (req: AuthRequest, res: Response) => {
             await VerificationLog.create({
                 reportId: report.id,
                 verifierId: req.user!.id,
-                verifierName: 'Ranger', // req.user?.name is not in AuthRequest yet
+                verifierName: 'Ranger',
                 previousStatus: oldStatus,
                 newStatus: status,
                 notes: notes,
                 timestamp: new Date(),
-                verificationMethod: 'manual' // Default for this endpoint
+                verificationMethod: 'manual'
             });
         } catch (logError) {
             console.error("Failed to create verification log:", logError);
-            // Don't fail the request, just log error
+        }
+
+        // --- ALERT B: Nearby Fire Warning ---
+        // If status is confirmed, notify nearby users
+        if (status === 'confirmed') {
+            try {
+                // Find users within ~10km (rough estimate: 0.1 degree is approx 11km)
+                const nearbyUsers = await User.findAll({
+                    where: {
+                        lastLat: {
+                            [Op.between]: [report.locationLat - 0.1, report.locationLat + 0.1]
+                        },
+                        lastLng: {
+                            [Op.between]: [report.locationLng - 0.1, report.locationLng + 0.1]
+                        }
+                    }
+                });
+
+                const expo = new Expo();
+                const messages: any[] = [];
+
+                for (const user of nearbyUsers) {
+                    if (user.expoPushToken && Expo.isExpoPushToken(user.expoPushToken)) {
+                        messages.push({
+                            to: user.expoPushToken,
+                            sound: 'default',
+                            title: '⚠️ Confirmed Fire Nearby',
+                            body: 'A confirmed fire has been reported near your location. Avoid the area.',
+                            data: { reportId: report.id },
+                        });
+                    }
+                }
+
+                if (messages.length > 0) {
+                  await expo.sendPushNotificationsAsync(messages);
+                }
+            } catch (nearbyError) {
+                console.error('Failed to send nearby fire alerts:', nearbyError);
+            }
         }
 
         res.json({ success: true, report });
@@ -201,7 +227,6 @@ router.get('/reports/:id/context', async (req: AuthRequest, res: Response) => {
         if (!report) return res.status(404).json({ error: "Report not found" });
 
         // 1. Nearby User Reports (within ~5km)
-        // 1 deg lat ~= 111km -> 5km ~= 0.045 deg
         const nearbyReports = await FireReport.findAll({
             where: {
                 locationLat: { [Op.between]: [report.locationLat - 0.045, report.locationLat + 0.045] },
@@ -214,9 +239,6 @@ router.get('/reports/:id/context', async (req: AuthRequest, res: Response) => {
         // 2. FIRMS Data nearby (within ~10km)
         let firmsData: any[] = [];
         try {
-            // Re-fetch or filter from cache. For now, we fetch 'world' or 'region' and filter? 
-            // fetching specific area from FIRMS API might be slow if not efficient.
-            // Simplified: Fetch global recent and filter in memory (not efficient for prod but okay for MVP)
             const allFirms = await fetchFirmsData('VIIRS', '24h');
             firmsData = allFirms.filter((p: any) => {
                 const lat = parseFloat(p.latitude);
@@ -229,12 +251,11 @@ router.get('/reports/:id/context', async (req: AuthRequest, res: Response) => {
         }
 
         // 3. Current Weather (Mock or Real)
-        // In a real implementation this would call OpenWeatherMap for specific coords
         const weather = {
             temp: 32,
             wind: 15,
             humidity: 20,
-            risk: 'High' // Logic would be shared with weather service
+            risk: 'High' 
         };
 
         // 4. Calculate Verification Score
@@ -245,7 +266,6 @@ router.get('/reports/:id/context', async (req: AuthRequest, res: Response) => {
         if (weather.risk.toLowerCase() === 'high') weatherScore = 10;
         if (weather.risk.toLowerCase() === 'extreme') weatherScore = 15;
 
-        // Cap at 100
         const totalScore = Math.min(Math.round(mlScore + satelliteScore + crowdScore + weatherScore), 100);
 
         const scoreBreakdown = {

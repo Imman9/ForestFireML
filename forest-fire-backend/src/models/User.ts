@@ -7,6 +7,8 @@ export interface UserAttributes {
   password: string;
   role: 'user' | 'ranger' | 'admin';
   expoPushToken?: string;
+  lastLat?: number;
+  lastLng?: number;
 }
 
 export interface UserCreationAttributes extends Optional<UserAttributes, 'id'> {}
@@ -18,6 +20,8 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   public password!: string;
   public role!: 'user' | 'ranger' | 'admin';
   public expoPushToken?: string;
+  public lastLat?: number;
+  public lastLng?: number;
 }
 
 export function initUserModel(sequelize: Sequelize) {
@@ -48,6 +52,14 @@ export function initUserModel(sequelize: Sequelize) {
       },
       expoPushToken: {
         type: DataTypes.STRING,
+        allowNull: true,
+      },
+      lastLat: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+      },
+      lastLng: {
+        type: DataTypes.FLOAT,
         allowNull: true,
       },
     },

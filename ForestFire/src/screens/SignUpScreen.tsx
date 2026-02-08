@@ -15,7 +15,7 @@ import Constants from 'expo-constants';
 const roles = [
   { label: 'User', value: 'user' },
   { label: 'Ranger', value: 'ranger' },
-  { label: 'Admin', value: 'admin' },
+
 ];
 
 const SignUpScreen: React.FC<{ navigation: any }> = ({ navigation }) => {

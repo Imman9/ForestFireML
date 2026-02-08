@@ -8,9 +8,10 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
-  Pressable,
   TextInput,
+  Pressable,
 } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { Ionicons } from '@expo/vector-icons';
 import { FireReport } from '../types';
 import { fireReportService, rangersService } from '../services/api';
@@ -225,9 +226,26 @@ const HistoryScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Fire Reports History</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={loadReports}>
-          <Ionicons name="refresh" size={24} color="#FF6B35" />
-        </TouchableOpacity>
+        <View style={{flexDirection: 'row'}}>
+          <TouchableOpacity 
+            style={[styles.refreshButton, {marginRight: 8}]} 
+            onPress={async () => {
+              await Notifications.scheduleNotificationAsync({
+                content: {
+                  title: "Test Notification 🔔",
+                  body: "This is a test sound!",
+                  sound: 'default',
+                },
+                trigger: null,
+              });
+            }}
+          >
+            <Ionicons name="notifications" size={24} color="#FF6B35" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.refreshButton} onPress={loadReports}>
+            <Ionicons name="refresh" size={24} color="#FF6B35" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Filters */}

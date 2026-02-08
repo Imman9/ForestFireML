@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { FireReport } from '../models';
+import { FireReport, User } from '../models';
+import { Expo } from 'expo-server-sdk';
 
 const router = Router();
 
@@ -38,6 +39,52 @@ router.post('/', async (req: Request, res: Response) => {
       timestamp: newReport.timestamp,
     };
     
+    // --- ALERT A: Report Submission Feedback ---
+    // If the user has a push token, send them a confirmation
+    try {
+      const user = await User.findByPk(userId);
+      if (user && user.expoPushToken && Expo.isExpoPushToken(user.expoPushToken)) {
+        const expo = new Expo();
+        await expo.sendPushNotificationsAsync([{
+          to: user.expoPushToken,
+          sound: 'default',
+          title: 'Report Received',
+          body: `Fire likelihood: ${confidence > 0.5 ? 'HIGH' : 'MODERATE'}. Awaiting ranger verification.`,
+          data: { reportId: newReport.id },
+        }]);
+      }
+    } catch (notifError) {
+      console.error('Failed to send submission feedback:', notifError);
+    }
+
+    // --- ALERT D: High-confidence Fire Report (Ranger Alert) ---
+    if (confidence && confidence > 0.8) {
+      try {
+        // Find all rangers with push tokens
+        const rangers = await User.findAll({ where: { role: 'ranger' } });
+        const expo = new Expo();
+        const messages: any[] = [];
+        
+        for (const ranger of rangers) {
+          if (ranger.expoPushToken && Expo.isExpoPushToken(ranger.expoPushToken)) {
+            messages.push({
+              to: ranger.expoPushToken,
+              sound: 'default',
+              title: '🚨 High-Confidence Fire Report',
+              body: 'Immediate review recommended.',
+              data: { reportId: newReport.id },
+            });
+          }
+        }
+        
+        if (messages.length > 0) {
+          await expo.sendPushNotificationsAsync(messages);
+        }
+      } catch (rangerError) {
+        console.error('Failed to send ranger alerts:', rangerError);
+      }
+    }
+
     res.status(201).json(response);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create fire report', details: error });

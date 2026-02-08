@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { User } from '../models';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
@@ -46,6 +47,23 @@ router.post('/push-token', async (req: Request, res: Response) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to save push token', details: error });
+  }
+});
+
+// Update user location
+router.patch('/me/location', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { lat, lng } = req.body;
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+
+    await User.update(
+      { lastLat: lat, lastLng: lng },
+      { where: { id: req.user.id } }
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update location' });
   }
 });
 
