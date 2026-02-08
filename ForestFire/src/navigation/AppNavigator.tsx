@@ -13,6 +13,7 @@ import ReportFireScreen from '../screens/ReportFireScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import SignUpScreen from '../screens/SignUpScreen';
+import RangerVerificationScreen from '../screens/RangerVerificationScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -76,6 +77,11 @@ const AppNavigator = () => {
         {user ? (
           <>
             <Stack.Screen name="Main" component={MainTabNavigator} />
+            <Stack.Screen 
+              name="RangerVerification" 
+              component={RangerVerificationScreen} 
+              options={{ headerShown: false }}
+            />
             {/* <Stack.Screen 
               name="ReportFire" 
               component={ReportFireScreen}

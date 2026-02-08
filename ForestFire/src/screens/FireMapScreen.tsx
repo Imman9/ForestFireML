@@ -167,6 +167,24 @@ const FireMapScreen: React.FC<FireMapScreenProps> = ({ navigation }) => {
     if (firmsEnabled) loadFirms();
   };
 
+  const handleUpdateStatus = async (status: string) => {
+    if (!selectedReport) return;
+    try {
+      await rangersService.updateReportStatus(selectedReport.id, status);
+      Alert.alert('Success', `Report marked as ${status}`);
+      setSelectedReport(null);
+      loadReports(); // refresh map
+    } catch (e) {
+      Alert.alert('Error', 'Failed to update status');
+    }
+  };
+
+  const getSatelliteMatch = (report: FireReport) => {
+    if (!firmsEnabled || firmsFires.length === 0) return false;
+    // Simple 5km check approx (0.05 degrees is roughly 5.5km at equator)
+    return firmsFires.some(f => Math.abs(f.latitude - report.location.latitude) < 0.05 && Math.abs(f.longitude - report.location.longitude) < 0.05);
+  };
+
   return (
     <View style={styles.container}>
       <MapView
@@ -459,17 +477,76 @@ const FireMapScreen: React.FC<FireMapScreenProps> = ({ navigation }) => {
                   )}
                 </View>
 
-                <View style={styles.modalActions}>
-                  <TouchableOpacity style={styles.actionButton}>
-                    <Ionicons name="call" size={20} color="white" />
-                    <Text style={styles.actionButtonText}>Call Emergency</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity style={[styles.actionButton, styles.secondaryButton]}>
-                    <Ionicons name="navigate" size={20} color="#FF6B35" />
-                    <Text style={styles.secondaryButtonText}>Navigate</Text>
-                  </TouchableOpacity>
-                </View>
+                  <View style={styles.modalActions}>
+                    {rangerMode && (user?.role === 'ranger' || user?.role === 'admin') ? (
+                      <View style={{flexDirection: 'column', width: '100%'}}>
+                         {getSatelliteMatch(selectedReport) && (
+                            <View style={styles.satelliteBadge}>
+                                <Ionicons name="planet" size={16} color="white" />
+                                <Text style={styles.satelliteBadgeText}>Satellite Confirmed</Text>
+                            </View>
+                         )}
+                         
+                         <Text style={styles.rangerTitle}>Ranger Verification Actions</Text>
+                         {/* <View style={styles.rangerActionsRow}>
+                             <TouchableOpacity 
+                                style={[styles.rangerBtn, { backgroundColor: '#28a745' }]} 
+                                onPress={() => handleUpdateStatus('confirmed')}
+                             >
+                                <Ionicons name="checkmark-circle" size={20} color="white" />
+                                <Text style={styles.rangerBtnText}>Confirm</Text>
+                             </TouchableOpacity>
+
+                             <TouchableOpacity 
+                                style={[styles.rangerBtn, { backgroundColor: '#dc3545' }]} 
+                                onPress={() => handleUpdateStatus('false_alarm')}
+                             >
+                                <Ionicons name="close-circle" size={20} color="white" />
+                                <Text style={styles.rangerBtnText}>False</Text>
+                             </TouchableOpacity>
+                         </View>
+                         <View style={[styles.rangerActionsRow, { marginTop: 8 }]}>
+                             <TouchableOpacity 
+                                style={[styles.rangerBtn, { backgroundColor: '#ffc107' }]} 
+                                onPress={() => handleUpdateStatus('needs_monitoring')}
+                             >
+                                <Ionicons name="eye" size={20} color="black" />
+                                <Text style={[styles.rangerBtnText, { color: 'black' }]}>Monitor</Text>
+                             </TouchableOpacity>
+                             
+                             <TouchableOpacity 
+                                style={[styles.rangerBtn, { backgroundColor: '#6c757d' }]} 
+                                onPress={() => setSelectedReport(null)}
+                             >
+                                <Text style={styles.rangerBtnText}>Cancel</Text>
+                             </TouchableOpacity>
+                         </View> */}
+                         
+                         <TouchableOpacity
+                             style={[styles.rangerBtn, { backgroundColor: '#3498db', marginTop: 10, width: '100%' }]}
+                             onPress={() => {
+                                 setSelectedReport(null);
+                                 navigation.navigate('RangerVerification', { reportId: selectedReport.id });
+                             }}
+                         >
+                             <Ionicons name="apps" size={20} color="white" />
+                             <Text style={styles.rangerBtnText}>Open Verification Dashboard</Text>
+                         </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <>
+                        <TouchableOpacity style={styles.actionButton}>
+                          <Ionicons name="call" size={20} color="white" />
+                          <Text style={styles.actionButtonText}>Call Emergency</Text>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity style={[styles.actionButton, styles.secondaryButton]}>
+                          <Ionicons name="navigate" size={20} color="#FF6B35" />
+                          <Text style={styles.secondaryButtonText}>Navigate</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
               </ScrollView>
             )}
           </View>
@@ -745,6 +822,46 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginLeft: 6,
     fontSize: 12,
+  },
+  satelliteBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8d3cd0',
+    padding: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+  },
+  satelliteBadgeText: {
+    color: 'white',
+    fontWeight: 'bold',
+    marginLeft: 6,
+    fontSize: 14,
+  },
+  rangerTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  rangerActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  rangerBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginHorizontal: 4,
+  },
+  rangerBtnText: {
+    color: 'white',
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });
 

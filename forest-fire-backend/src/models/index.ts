@@ -18,10 +18,19 @@ const sequelize = new Sequelize(
 import { initFireReportModel, FireReport } from './FireReport';
 import { initUserModel, User } from './User';
 import { initSystemSettingModel, SystemSetting } from './SystemSetting';
+import { initVerificationLogModel, VerificationLog } from './VerificationLog';
 
 initFireReportModel(sequelize);
 initUserModel(sequelize);
 initSystemSettingModel(sequelize);
+initVerificationLogModel(sequelize);
 
-export { sequelize, FireReport, User, SystemSetting };
-export default sequelize; 
+// Associations
+// FireReport.hasMany(VerificationLog, { foreignKey: 'reportId' });
+// VerificationLog.belongsTo(FireReport, { foreignKey: 'reportId' });
+// User.hasMany(VerificationLog, { foreignKey: 'verifierId' });
+// VerificationLog.belongsTo(User, { foreignKey: 'verifierId' });
+
+
+export { sequelize, FireReport, User, SystemSetting, VerificationLog };
+export default sequelize;

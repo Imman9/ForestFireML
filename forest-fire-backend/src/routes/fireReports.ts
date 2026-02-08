@@ -110,7 +110,7 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
   try {
     const { status } = req.body;
     
-    if (!status || !['unverified', 'confirmed', 'resolved'].includes(status)) {
+    if (!status || !['unverified', 'confirmed', 'resolved',].includes(status)) {
       return res.status(400).json({ error: 'Invalid status. Must be unverified, confirmed, or resolved' });
     }
     

@@ -13,6 +13,19 @@ const api = axios.create({
   timeout: 30000,
 });
 
+api.interceptors.request.use(
+  async (config) => {
+    const token = await AsyncStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // export const mlService = mockMlService;
 export const fireReportService = realFireReportService;
 export const weatherService = realWeatherService;
@@ -65,8 +78,20 @@ export const rangersService = {
     const res = await api.get('/rangers/risk-map');
     return res.data;
   },
+  getReportContext: async (id: string) => {
+      const res = await api.get(`/rangers/reports/${id}/context`);
+      return res.data;
+  },
   validateReport: async (id: string) => {
-    const res = await api.post(`/rangers/reports/${id}/validate`);
+    // Legacy support or alias to confirm
+    return await rangersService.updateReportStatus(id, 'confirmed');
+  },
+  updateReportStatus: async (id: string, status: string, notes?: string) => {
+    const res = await api.patch(`/rangers/reports/${id}/status`, { status, notes });
+    return res.data;
+  },
+  deleteReport: async (id: string) => {
+    const res = await api.delete(`/rangers/reports/${id}`);
     return res.data;
   }
 };

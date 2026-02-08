@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FireReport } from '../types';
-import { fireReportService } from '../services/api';
+import { fireReportService, rangersService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const HistoryScreen: React.FC = () => {
@@ -110,6 +110,34 @@ const HistoryScreen: React.FC = () => {
     } finally {
       setSelectedReport(null);
     }
+  };
+
+  const deleteReport = async () => {
+    if (!selectedReport) return;
+    
+    Alert.alert(
+      'Delete Report',
+      'Are you sure you want to permanently delete this report?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+             try {
+               setShowStatusModal(false);
+               await rangersService.deleteReport(selectedReport.id);
+               setReports(prevReports => prevReports.filter(r => r.id !== selectedReport.id));
+               Alert.alert('Success', 'Report deleted');
+             } catch (error) {
+               Alert.alert('Error', 'Failed to delete report');
+             } finally {
+               setSelectedReport(null);
+             }
+          }
+        }
+      ]
+    );
   };
 
   const renderReportItem = ({ item }: { item: FireReport }) => (
@@ -293,6 +321,14 @@ const HistoryScreen: React.FC = () => {
             >
               <Ionicons name="checkmark-circle" size={24} color="#00CC00" />
               <Text style={styles.statusOptionText}>Resolved</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.statusOption, { borderLeftColor: '#f00', borderLeftWidth: 4, backgroundColor: '#fff5f5' }]}
+              onPress={deleteReport}
+            >
+              <Ionicons name="trash" size={24} color="#f00" />
+              <Text style={[styles.statusOptionText, { color: '#f00' }]}>Delete Report</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
