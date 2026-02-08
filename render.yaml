@@ -1,0 +1,41 @@
+services:
+  # Python ML Service
+  - type: web
+    name: forest-fire-ml
+    runtime: python
+    rootDir: forest-fire-ml
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
+    envVars:
+      - key: PORT
+        value: 10000
+
+  # Node.js Backend Service
+  - type: web
+    name: forest-fire-backend
+    runtime: node
+    rootDir: forest-fire-backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: forest-fire-db
+          property: connectionString
+      - key: API_BASE_URL
+        value: https://forest-fire-backend.onrender.com/api # You might need to update this after deployment or use an internal address if possible
+      - key: ML_SERVICE_URL
+        fromService:
+          type: web
+          name: forest-fire-ml
+          envVar: RENDER_EXTERNAL_URL # Or use internal address: http://forest-fire-ml:10000
+
+databases:
+  - name: forest-fire-db
+    databaseName: forestfiredb
+    user: postgres
+
